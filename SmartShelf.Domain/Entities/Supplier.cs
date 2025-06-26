@@ -4,7 +4,7 @@ namespace SmartShelf.Domain.Entities;
 
 public class Supplier
 {
-    public int Id { get; private set; }
+    public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string TaxNumber { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
@@ -20,6 +20,7 @@ public class Supplier
     {
         Guard.AgainstNullOrEmpty(name, nameof(name));
 
+        Id = Guid.NewGuid();
         Name = name;
         TaxNumber = taxNumber;
         Email = email;

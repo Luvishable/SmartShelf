@@ -1,13 +1,13 @@
-using SmartShelf.Application.DTOs;
+using SmartShelf.Application.Dtos;
 using SmartShelf.Domain.Entities;
 
 namespace SmartShelf.Application.Interfaces;
 
 public interface IProductService
 {
-    void Create(ProductCreateDto dto);
-    Product? GetById(Guid id);
-    IEnumerable<Product> GetAll();
+    ProductResponseDto Create(ProductCreateDto dto);
+    ProductResponseDto GetById(Guid id);
+    IEnumerable<ProductResponseDto> GetAll();
     void Update(Guid id, ProductCreateDto dto);
     void Delete(Guid id);
 }
