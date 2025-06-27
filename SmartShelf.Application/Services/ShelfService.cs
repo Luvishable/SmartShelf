@@ -16,10 +16,19 @@ public class ShelfService : IShelfService
         _products = products;
     }
 
-    public void AddProductToShelf(Guid shelfId, Product product, int quantity)
+    public Guid CreateShelf(ShelfCreateDto dto)
+    {
+        var shelf = new Shelf(Guid.NewGuid(), dto.Code, dto.MaxCapacity);
+        _shelves.Add(shelf);
+        return shelf.Id;
+    }
+
+    public void AddProductToShelf(Guid shelfId, Guid productId, int quantity)
     {
         var shelf = _shelves.FirstOrDefault(s => s.Id == shelfId)
             ?? throw new InvalidOperationException("Shelf not found.");
+
+        var product = _products.FirstOrDefault(p => p.Id == productId);
 
         try
         {

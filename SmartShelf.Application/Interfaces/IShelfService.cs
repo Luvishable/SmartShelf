@@ -6,7 +6,8 @@ namespace SmartShelf.Application.Interfaces;
 
 public interface IShelfService
 {
-    void AddProductToShelf(Guid shelfId, Product product, int quantity);
+    Guid CreateShelf(ShelfCreateDto dto);
+    void AddProductToShelf(Guid shelfId, Guid productId, int quantity);
     void RemoveProductFromShelf(Guid shelfId, Guid productId, int quantity);
     void DeactivateShelf(Guid id);
     void ReactivateShelf(Guid id);
