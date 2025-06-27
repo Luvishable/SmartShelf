@@ -3,6 +3,7 @@ using SmartShelf.Application.Interfaces;
 using SmartShelf.Domain.Entities;
 using SmartShelf.Domain.Common;
 
+
 namespace SmartShelf.Application.Services;
 
 public class ProductService : IProductService
@@ -11,10 +12,13 @@ public class ProductService : IProductService
     private readonly List<Category> _categories;
     private readonly List<Supplier> _suppliers;
 
+    
+
     public ProductService(List<Category> categories, List<Supplier> suppliers)
     {
         _categories = categories;
         _suppliers = suppliers;
+     
     }
 
     public ProductResponseDto Create(ProductCreateDto dto)

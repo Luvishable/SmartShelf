@@ -3,7 +3,7 @@ using SmartShelf.Application.DTOs;
 using SmartShelf.Application.Interfaces;
 using SmartShelf.Domain.Entities;
 
-namespace SmaertShelf.Application.Services;
+namespace SmartShelf.Application.Services;
 
 public class CategoryService : ICategoryService
 {
