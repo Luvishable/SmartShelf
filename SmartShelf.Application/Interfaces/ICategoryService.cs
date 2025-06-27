@@ -1,4 +1,3 @@
-using SmartShelf.Application.Dtos;
 using SmartShelf.Application.DTOs;
 
 namespace SmartShelf.Application.Interfaces;

@@ -1,4 +1,4 @@
-namespace SmartShelf.Application.Dtos;
+namespace SmartShelf.Application.DTOs;
 
 public class ProductResponseDto
 {

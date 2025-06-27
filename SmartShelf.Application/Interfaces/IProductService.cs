@@ -1,4 +1,4 @@
-using SmartShelf.Application.Dtos;
+using SmartShelf.Application.DTOs;
 using SmartShelf.Domain.Entities;
 
 namespace SmartShelf.Application.Interfaces;
