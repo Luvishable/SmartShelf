@@ -1,103 +1,86 @@
 using SmartShelf.Application.DTOs;
 using SmartShelf.Application.Interfaces;
 using SmartShelf.Domain.Entities;
-using SmartShelf.Domain.Common;
-
 
 namespace SmartShelf.Application.Services;
 
 public class ProductService : IProductService
 {
-    private readonly List<Product> _products = new();
-    private readonly List<Category> _categories;
-    private readonly List<Supplier> _suppliers;
+   
+    private readonly IRepository<Category> _categoryRepository;
+    private readonly IRepository<Supplier> _supplierRepository;
+    private readonly IProductRepository _productRepository;
 
-    
-
-    public ProductService(List<Category> categories, List<Supplier> suppliers)
+    public ProductService(IProductRepository productRepository,
+                          IRepository<Category> categoryRepository,
+                          IRepository<Supplier> supplierRepository)
     {
-        _categories = categories;
-        _suppliers = suppliers;
-     
+        _productRepository = productRepository;
+        _categoryRepository = categoryRepository;
+        _supplierRepository = supplierRepository;
     }
 
-    public ProductResponseDto Create(ProductCreateDto dto)
+    public async Task<Guid> CreateAsync(ProductCreateDto dto)
     {
-        Guard.AgainstNull(dto, nameof(dto));
-        Guard.AgainstNullOrEmpty(dto.Name, nameof(dto.Name));
-        Guard.AgainstNullOrEmpty(dto.Barcode, nameof(dto.Barcode));
-        Guard.AgainstNonPositive(dto.Weight, nameof(dto.Weight));
-        Guard.AgainstNonPositive(dto.PurchasePrice, nameof(dto.PurchasePrice));
+        var category = await _categoryRepository.GetByIdAsync(dto.CategoryId)
+                       ?? throw new InvalidOperationException("Category not found.");
 
-        var category = _categories.FirstOrDefault(c => c.Id == dto.CategoryId)
-            ?? throw new InvalidOperationException("Category not found.");
-
-        var supplier = _suppliers.FirstOrDefault(s => s.Id == dto.SupplierId)
-            ?? throw new InvalidOperationException("Supplier not found.");
+        var supplier = await _supplierRepository.GetByIdAsync(dto.SupplierId)
+                       ?? throw new InvalidOperationException("Supplier not found.");
 
         var product = new Product(
-            name: dto.Name,
-            barcode: dto.Barcode,
-            weight: dto.Weight,
-            categoryId: dto.CategoryId,
-            supplierId: dto.SupplierId,
-            purchasePrice: dto.PurchasePrice,
-            unit: dto.Unit,
-            entryDate: dto.EntryDate,
-            expirationDate: dto.ExpirationDate
+                                  dto.Name,
+                                  dto.Barcode,
+                                  dto.Weight,
+                                  category.Id,
+                                  supplier.Id,
+                                  dto.PurchasePrice,
+                                  dto.Unit,
+                                  dto.EntryDate,
+                                  dto.ExpirationDate
         );
 
-        _products.Add(product);
-
-        return new ProductResponseDto
-        {
-            Id = product.Id,
-            Name = product.Name,
-            Barcode = product.Barcode,
-            Weight = product.Weight,
-            Unit = product.Unit,
-            PurchasePrice = product.PurchasePrice,
-            EntryDate = product.EntryDate,
-            ExpirationDate = product.ExpirationDate,
-            CategoryName = category.Name,
-            SupplierName = supplier.Name
-        };
+        await _productRepository.AddAsync(product);
+        return product.Id;
     }
 
-    public ProductResponseDto GetById(Guid id)
+    public async Task<List<ProductResponseDto>> GetAllAsync()
     {
-        var product = _products.FirstOrDefault(p => p.Id == id)
-            ?? throw new InvalidOperationException("Product not found.");
+        var products = await _productRepository.GetAllAsync();
+        var categories = await _categoryRepository.GetAllAsync();
+        var suppliers = await _supplierRepository.GetAllAsync();
 
-        var categoryName = _categories.FirstOrDefault(c => c.Id == product.CategoryId);
-        var supplierName = _suppliers.FirstOrDefault(s => s.Id == product.SupplierId);
-
-        return new ProductResponseDto
+        return products.Select(p =>
         {
-            Id = product.Id,
-            Name = product.Name,
-            Barcode = product.Barcode,
-            Weight = product.Weight,
-            Unit = product.Unit,
-            PurchasePrice = product.PurchasePrice,
-            EntryDate = product.EntryDate,
-            ExpirationDate = product.ExpirationDate,
-            CategoryName = categoryName?.Name ?? "Unknown",
-            SupplierName = supplierName?.Name ?? "Unknown"
-        };
+            var category = categories.FirstOrDefault(c => c.Id == p.CategoryId);
+            var supplier = suppliers.FirstOrDefault(s => s.Id == p.SupplierId);
 
+            return new ProductResponseDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Barcode = p.Barcode,
+                Weight = p.Weight,
+                Unit = p.Unit,
+                PurchasePrice = p.PurchasePrice,
+                EntryDate = p.EntryDate,
+                ExpirationDate = p.ExpirationDate,
+                CategoryName = category?.Name ?? "Unknown",
+                SupplierName = supplier?.Name ?? "Unknown"
+            };
+        }
+        ).ToList();
     }
 
-    public IEnumerable<ProductResponseDto> GetAll()
-{
-    var responseList = new List<ProductResponseDto>();
-
-    foreach (var product in _products)
+    public async Task<ProductResponseDto?> GetByIdAsync(Guid id)
     {
-        var category = _categories.FirstOrDefault(c => c.Id == product.CategoryId);
-        var supplier = _suppliers.FirstOrDefault(s => s.Id == product.SupplierId);
+        var product = await _productRepository.GetByIdAsync(id);
+        if (product is null) return null;
 
-        var dto = new ProductResponseDto
+        var category = await _categoryRepository.GetByIdAsync(product.CategoryId);
+        var supplier = await _supplierRepository.GetByIdAsync(product.SupplierId);
+
+        return new ProductResponseDto
         {
             Id = product.Id,
             Name = product.Name,
@@ -110,49 +93,68 @@ public class ProductService : IProductService
             CategoryName = category?.Name ?? "Unknown",
             SupplierName = supplier?.Name ?? "Unknown"
         };
-
-        responseList.Add(dto);
     }
 
-    return responseList;
-}
+    public async Task UpdateAsync(Guid id, ProductCreateDto dto)
+    {
+        var product = await _productRepository.GetByIdAsync(id)
+            ?? throw new InvalidOperationException("Product not found.");
 
-    public void Update(Guid productId, ProductCreateDto dto)
+        var category = await _categoryRepository.GetByIdAsync(dto.CategoryId)
+            ?? throw new InvalidOperationException("Category not found.");
+
+        var supplier = await _supplierRepository.GetByIdAsync(dto.SupplierId)
+            ?? throw new InvalidOperationException("Supplier not found.");
+
+        product.Update(
+            dto.Name,
+            dto.Barcode,
+            dto.Weight,
+            category.Id,
+            supplier.Id,
+            dto.PurchasePrice,
+            dto.Unit,
+            dto.EntryDate,
+            dto.ExpirationDate
+        );
+
+        _productRepository.Update(product);
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var product = await _productRepository.GetByIdAsync(id)
+            ?? throw new InvalidOperationException("Product not found");
+
+        _productRepository.Delete(product);
+    }
+
+    public async Task<List<ProductResponseDto>> GetExpiredProductsAsync()
 {
-    Guard.AgainstNull(dto, nameof(dto));
-    Guard.AgainstNullOrEmpty(dto.Name, nameof(dto.Name));
-    Guard.AgainstNullOrEmpty(dto.Barcode, nameof(dto.Barcode));
-    Guard.AgainstNonPositive(dto.Weight, nameof(dto.Weight));
-    Guard.AgainstNonPositive(dto.PurchasePrice, nameof(dto.PurchasePrice));
+    var products = await _productRepository.GetExpiredProductsAsync();
 
-    var product = _products.FirstOrDefault(p => p.Id == productId)
-        ?? throw new InvalidOperationException("Product not found.");
+    var tasks = products.Select(async p =>
+    {
+        var category = await _categoryRepository.GetByIdAsync(p.CategoryId);
+        var supplier = await _supplierRepository.GetByIdAsync(p.SupplierId);
 
-    var category = _categories.FirstOrDefault(c => c.Id == dto.CategoryId)
-        ?? throw new InvalidOperationException("Category not found.");
+        return new ProductResponseDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Barcode = p.Barcode,
+            Weight = p.Weight,
+            Unit = p.Unit,
+            PurchasePrice = p.PurchasePrice,
+            EntryDate = p.EntryDate,
+            ExpirationDate = p.ExpirationDate,
+            CategoryName = category?.Name ?? "Unknown",
+            SupplierName = supplier?.Name ?? "Unknown"
+        };
+    });
 
-    var supplier = _suppliers.FirstOrDefault(s => s.Id == dto.SupplierId)
-        ?? throw new InvalidOperationException("Supplier not found.");
-
-    // Güncelleme işlemi
-    product.Update(
-        name: dto.Name,
-        barcode: dto.Barcode,
-        weight: dto.Weight,
-        categoryId: dto.CategoryId,
-        supplierId: dto.SupplierId,
-        purchasePrice: dto.PurchasePrice,
-        unit: dto.Unit,
-        entryDate: dto.EntryDate,
-        expirationDate: dto.ExpirationDate
-    );
-}
-
-public void Delete(Guid productId)
-{
-    var product = _products.FirstOrDefault(p => p.Id == productId)
-        ?? throw new InvalidOperationException("Product not found.");
-
-    _products.Remove(product);
+    var result = await Task.WhenAll(tasks);
+    
+    return result.ToList();
 }
 }

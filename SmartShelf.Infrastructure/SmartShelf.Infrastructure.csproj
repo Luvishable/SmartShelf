@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SmartShelf.Domain\SmartShelf.Domain.csproj" />
+    <ProjectReference Include="..\SmartShelf.Application\SmartShelf.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

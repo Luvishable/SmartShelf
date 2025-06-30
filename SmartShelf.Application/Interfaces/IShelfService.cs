@@ -1,17 +1,18 @@
-using SmartShelf.Domain.Entities;
 using SmartShelf.Application.DTOs;
-//using SmartShelf.Application.Dtos;
 
 namespace SmartShelf.Application.Interfaces;
 
 public interface IShelfService
 {
-    Guid CreateShelf(ShelfCreateDto dto);
-    void AddProductToShelf(Guid shelfId, Guid productId, int quantity);
-    void RemoveProductFromShelf(Guid shelfId, Guid productId, int quantity);
-    void DeactivateShelf(Guid id);
-    void ReactivateShelf(Guid id);
+    Task<Guid> CreateShelfAsync(ShelfCreateDto dto);
 
-    ShelfResponseDto GetById(Guid id);
-    IEnumerable<ShelfResponseDto> GetAll();
+    Task<IEnumerable<ShelfResponseDto>> GetAllAsync();
+
+    Task AddProductToShelfAsync(AddProductToShelfDto dto);
+
+    Task RemoveProductFromShelfAsync(RemoveProductFromShelfDto dto);
+
+    Task DeactivateShelfAsync(Guid id);
+
+    Task ReactivateShelfAsync(Guid id);
 }

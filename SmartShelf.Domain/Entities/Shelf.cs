@@ -11,7 +11,7 @@ public class Shelf
     public bool IsActive { get; private set; }
 
     private readonly List<ShelfProduct> _products = new();
-    public IReadOnlyCollection<ShelfProduct> Products => _products.AsReadOnly();
+    public IReadOnlyCollection<ShelfProduct> Products => _products;
 
     public Shelf(Guid id, string code, decimal maxCapacity)
     {

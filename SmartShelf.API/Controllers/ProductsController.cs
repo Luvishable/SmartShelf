@@ -6,52 +6,57 @@ namespace SmartShelf.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-
-public class ProductsController : ControllerBase
+public class ProductController : ControllerBase
 {
     private readonly IProductService _productService;
 
-    public ProductsController(IProductService productService)
+    public ProductController(IProductService productService)
     {
         _productService = productService;
     }
 
-    [HttpPost]
-    public IActionResult Create([FromBody] ProductCreateDto dto)
-    {
-        var id = _productService.Create(dto);
-        return CreatedAtAction(nameof(GetById), new { id }, null);
-    }
-
-    [HttpGet("{id}")]
-    public IActionResult GetById(Guid id)
-    {
-        var product = _productService.GetById(id);
-        if (product == null)
-        {
-            return NotFound();
-        }
-        return Ok(product);
-    }
-
     [HttpGet]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        var products = _productService.GetAll();
+        var products = await _productService.GetAllAsync();
         return Ok(products);
     }
 
-    [HttpPut("{id}")]
-    public IActionResult Update(Guid id, [FromBody] ProductCreateDto dto)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
     {
-        _productService.Update(id, dto);
+        var product = await _productService.GetByIdAsync(id);
+        if (product is null)
+            return NotFound();
+
+        return Ok(product);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] ProductCreateDto dto)
+    {
+        var id = await _productService.CreateAsync(dto);
+        return CreatedAtAction(nameof(GetById), new { id }, null);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] ProductCreateDto dto)
+    {
+        await _productService.UpdateAsync(id, dto);
         return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        _productService.Delete(id);
+        await _productService.DeleteAsync(id);
         return NoContent();
+    }
+
+    [HttpGet("expired")]
+    public async Task<IActionResult> GetExpiredProducts()
+    {
+        var expired = await _productService.GetExpiredProductsAsync();
+        return Ok(expired);
     }
 }

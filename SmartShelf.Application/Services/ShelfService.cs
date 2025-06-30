@@ -7,102 +7,36 @@ namespace SmartShelf.Application.Services;
 
 public class ShelfService : IShelfService
 {
-    private readonly List<Shelf> _shelves;
-    private readonly List<Product> _products;
+    private readonly IShelfRepository _shelfRepository;
+    private readonly IProductRepository _productRepository;
 
-    public ShelfService(List<Shelf> shelves, List<Product> products)
+    public ShelfService(IShelfRepository shelfRepository, IProductRepository productRepository)
     {
-        _shelves = shelves;
-        _products = products;
+        _shelfRepository = shelfRepository;
+        _productRepository = productRepository;
     }
 
-    public Guid CreateShelf(ShelfCreateDto dto)
+    public async Task<Guid> CreateShelfAsync(ShelfCreateDto dto)
     {
         var shelf = new Shelf(Guid.NewGuid(), dto.Code, dto.MaxCapacity);
-        _shelves.Add(shelf);
+        await _shelfRepository.AddAsync(shelf);
         return shelf.Id;
     }
 
-    public void AddProductToShelf(Guid shelfId, Guid productId, int quantity)
+    public async Task<IEnumerable<ShelfResponseDto>> GetAllAsync()
     {
-        var shelf = _shelves.FirstOrDefault(s => s.Id == shelfId)
-            ?? throw new InvalidOperationException("Shelf not found.");
+        var shelves = await _shelfRepository.GetAllAsync();
 
-        var product = _products.FirstOrDefault(p => p.Id == productId);
+        var result = new List<ShelfResponseDto>();
 
-        try
+        foreach (var shelf in shelves)
         {
-            shelf.AddProduct(product, quantity);
-        }
-        catch (ShelfOverloadedException ex)
-        {
-            throw new InvalidOperationException(
-                $"Cannot add product. Shelf {ex.ShelfCode} overloaded. Remaining capacity {ex.RemainingCapacity}. You can add {ex.MaxFittableQuantity}"
-            );
-        }
-    }
+            var productDtos = new List<ShelfProductResponseDto>();
 
-    public void RemoveProductFromShelf(Guid shelfId, Guid productId, int quantity)
-    {
-        var shelf = _shelves.FirstOrDefault(s => s.Id == shelfId)
-            ?? throw new InvalidOperationException("Shelf not found.");
-
-        shelf.RemoveProduct(productId, quantity);
-    }
-
-    public void DeactivateShelf(Guid id)
-    {
-        var shelf = _shelves.FirstOrDefault(s => s.Id == id)
-            ?? throw new InvalidOperationException("Shelf not found.");
-
-        shelf.Deactivate();
-    }
-
-    public void ReactivateShelf(Guid id)
-    {
-        var shelf = _shelves.FirstOrDefault(s => s.Id == id)
-            ?? throw new InvalidOperationException("Shelf not found.");
-
-        shelf.Reactivate();
-    }
-
-    public ShelfResponseDto GetById(Guid id)
-    {
-        var shelf = _shelves.FirstOrDefault(s => s.Id == id)
-            ?? throw new InvalidOperationException("Shelf not found.");
-
-        var productDtos = shelf.Products.Select(p =>
-        {
-            var product = _products.FirstOrDefault(prod => prod.Id == p.ProductId);
-            return new ShelfProductResponseDto
+            foreach (var p in shelf.Products)
             {
-                ProductId = p.ProductId,
-                ProductName = product?.Name ?? "Unknown",
-                Barcode = product?.Barcode ?? "Unknown",
-                Quantity = p.Quantity,
-                WeightPerItem = p.WeightPerItem,
-                RecordedAt = p.RecordedAt
-            };
-        }).ToList();
-
-        return new ShelfResponseDto
-        {
-            Id = shelf.Id,
-            Code = shelf.Code,
-            MaxCapacity = shelf.MaxCapacity,
-            IsActive = shelf.IsActive,
-            Products = productDtos
-        };
-    }
-
-    public IEnumerable<ShelfResponseDto> GetAll()
-    {
-        return _shelves.Select(shelf =>
-        {
-            var productDtos = shelf.Products.Select(p =>
-            {
-                var product = _products.FirstOrDefault(prod => prod.Id == p.ProductId);
-                return new ShelfProductResponseDto
+                var product = await _productRepository.GetByIdAsync(p.ProductId);
+                productDtos.Add(new ShelfProductResponseDto
                 {
                     ProductId = p.ProductId,
                     ProductName = product?.Name ?? "Unknown",
@@ -110,17 +44,66 @@ public class ShelfService : IShelfService
                     Quantity = p.Quantity,
                     WeightPerItem = p.WeightPerItem,
                     RecordedAt = p.RecordedAt
-                };
-            }).ToList();
+                });
+            }
 
-            return new ShelfResponseDto
+            result.Add(new ShelfResponseDto
             {
                 Id = shelf.Id,
                 Code = shelf.Code,
                 MaxCapacity = shelf.MaxCapacity,
                 IsActive = shelf.IsActive,
                 Products = productDtos
-            };
-        });
+            });
+        }
+
+        return result;
+    }
+
+    public async Task AddProductToShelfAsync(AddProductToShelfDto dto)
+    {
+        var shelf = await _shelfRepository.GetByIdAsync(dto.ShelfId)
+            ?? throw new InvalidOperationException("Shelf not found.");
+
+        var product = await _productRepository.GetByIdAsync(dto.ProductId)
+            ?? throw new InvalidOperationException("Product not found.");
+
+        try
+        {
+            shelf.AddProduct(product, dto.Quantity);
+            _shelfRepository.Update(shelf);
+        }
+        catch (ShelfOverloadedException ex)
+        {
+            throw new InvalidOperationException(
+                $"Cannot add product. Shelf {ex.ShelfCode} overloaded. Remaining capacity {ex.RemainingCapacity}. You can add {ex.MaxFittableQuantity}");
+        }
+    }
+
+    public async Task RemoveProductFromShelfAsync(RemoveProductFromShelfDto dto)
+    {
+        var shelf = await _shelfRepository.GetByIdAsync(dto.ShelfId)
+            ?? throw new InvalidOperationException("Shelf not found.");
+
+        shelf.RemoveProduct(dto.ProductId, dto.Quantity);
+        _shelfRepository.Update(shelf);
+    }
+
+    public async Task DeactivateShelfAsync(Guid id)
+    {
+        var shelf = await _shelfRepository.GetByIdAsync(id)
+            ?? throw new InvalidOperationException("Shelf not found.");
+
+        shelf.Deactivate();
+        _shelfRepository.Update(shelf);
+    }
+
+    public async Task ReactivateShelfAsync(Guid id)
+    {
+        var shelf = await _shelfRepository.GetByIdAsync(id)
+            ?? throw new InvalidOperationException("Shelf not found.");
+
+        shelf.Reactivate();
+        _shelfRepository.Update(shelf);
     }
 }

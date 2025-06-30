@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using SmartShelf.Application.DTOs;
 using SmartShelf.API.Middleware;
+using SmartShelf.Application.Interfaces;
+using SmartShelf.Infrastructure.Repositories;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,8 +13,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<SmartShelfDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
 
+builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IShelfRepository, ShelfRepository>();
+
+builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDto>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 
 
 var app = builder.Build();
